@@ -1,7 +1,8 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
-import logging
+
+
 import concurrent.futures
 import pandas as pd
 import os.path
@@ -17,8 +18,9 @@ from instock.lib.database_factory import get_database, execute_sql, insert_db_fr
 from instock.core.singleton_stock import stock_hist_data
 from instock.core.stockfetch import fetch_stock_top_entity_data
 from instock.lib.common_check import check_and_delete_old_data_for_realtime_data
-__author__ = 'myh '
-__date__ = '2023/3/10 '
+from instock.lib.simple_logger import get_logger
+# 获取logger
+logger = get_logger(__name__)
 
 
 def prepare(date, strategy, stocks_data=None):
@@ -53,7 +55,7 @@ def prepare(date, strategy, stocks_data=None):
         check_and_delete_old_data_for_realtime_data(strategy, data, date)
 
     except Exception as e:
-        logging.exception(f"strategy_data_daily_job.prepare处理异常：{strategy}策略{e}")
+        logger.exception(f"strategy_data_daily_job.prepare处理异常：{strategy}策略{e}")
 
 
 def run_check(strategy_fun, table_name, stocks, date, workers=40):
@@ -75,9 +77,9 @@ def run_check(strategy_fun, table_name, stocks, date, workers=40):
                     if future.result():
                         data.append(stock)
                 except Exception as e:
-                    logging.error(f"strategy_data_daily_job.run_check处理异常：{stock[1]}代码{e}策略{table_name}")
+                    logger.error(f"strategy_data_daily_job.run_check处理异常：{stock[1]}代码{e}策略{table_name}")
     except Exception as e:
-        logging.exception(f"strategy_data_daily_job.run_check处理异常：{e}策略{table_name}")
+        logger.exception(f"strategy_data_daily_job.run_check处理异常：{e}策略{table_name}")
     if not data:
         return None
     else:
@@ -94,8 +96,7 @@ def main():
         try:
             runt.run_with_args(prepare, strategy, stocks_data)
         except Exception as e:
-            logging.exception(f"strategy_data_daily_job.main处理异常：{strategy}策略{e}")
-        print("debug")
+            logger.exception(f"strategy_data_daily_job.main处理异常：{strategy}策略{e}")
     # runt.run_with_args(prepare, tbs.TABLE_CN_STOCK_STRATEGIES[2], stocks_data)
     # runt.run_with_args(prepare, tbs.TABLE_CN_STOCK_STRATEGIES[3], stocks_data)
     # runt.run_with_args(prepare, tbs.TABLE_CN_STOCK_STRATEGIES[1])

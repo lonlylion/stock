@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-import logging
+
+
+
 import concurrent.futures
 import pandas as pd
 import os.path
@@ -14,13 +16,11 @@ sys.path.append(cpath)
 import instock.lib.run_template as runt
 import instock.core.tablestructure as tbs
 import instock.lib.database as mdb
-from instock.lib.database_factory import get_database, execute_sql, insert_db_from_df, read_sql_to_df
+from instock.lib.database_factory import execute_sql, insert_db_from_df, read_sql_to_df
 import instock.core.indicator.calculate_indicator as idr
 from instock.core.singleton_stock import stock_hist_data
-
-__author__ = 'myh '
-__date__ = '2023/3/10 '
-
+from instock.lib.simple_logger import get_logger
+logger = get_logger(__name__)
 
 def prepare(date):
     try:
@@ -55,7 +55,7 @@ def prepare(date):
         insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
 
     except Exception as e:
-        logging.error(f"indicators_data_daily_job.prepare处理异常：{e}")
+        logger.error(f"indicators_data_daily_job.prepare处理异常：{e}")
 
 
 def run_check(stocks, date=None, workers=40):
@@ -74,9 +74,9 @@ def run_check(stocks, date=None, workers=40):
                     if _data_ is not None:
                         data[stock] = _data_
                 except Exception as e:
-                    logging.error(f"indicators_data_daily_job.run_check处理异常：{stock[1]}代码{e}")
+                    logger.error(f"indicators_data_daily_job.run_check处理异常：{stock[1]}代码{e}")
     except Exception as e:
-        logging.error(f"indicators_data_daily_job.run_check处理异常：{e}")
+        logger.error(f"indicators_data_daily_job.run_check处理异常：{e}")
     if not data:
         return None
     else:
@@ -116,7 +116,7 @@ def guess_buy(date):
         data = pd.concat([data, pd.DataFrame(columns=_columns_backtest)])
         insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
     except Exception as e:
-        logging.error(f"indicators_data_daily_job.guess_buy处理异常：{e}")
+        logger.error(f"indicators_data_daily_job.guess_buy处理异常：{e}")
 
 
 # 设置卖出数据。
@@ -150,7 +150,7 @@ def guess_sell(date):
         data = pd.concat([data, pd.DataFrame(columns=_columns_backtest)])
         insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
     except Exception as e:
-        logging.error(f"indicators_data_daily_job.guess_sell处理异常：{e}")
+        logger.error(f"indicators_data_daily_job.guess_sell处理异常：{e}")
 
 
 def main():

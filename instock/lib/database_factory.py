@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import os
-import logging
+
 from enum import Enum
 from typing import Optional, Dict, Any, Union, List, Tuple
 import pandas as pd
-from datetime import datetime, time
+from datetime import time
 try:
     import pymysql
-    from sqlalchemy import create_engine, inspect
+    from sqlalchemy import create_engine
     from sqlalchemy.types import NVARCHAR
 except ImportError:
-    logging.warning("MySQL dependencies not installed")
+    logger.warning("MySQL dependencies not installed")
     pymysql = None
 
 __author__ = 'myh '
@@ -36,22 +41,16 @@ class DatabaseConfig:
             'host': os.environ.get('MYSQL_HOST', '192.168.1.6'),
             'port': int(os.environ.get('MYSQL_PORT', '3306')),
             'user': os.environ.get('MYSQL_USER', 'root'),
-            'password': os.environ.get('MYSQL_PASSWORD', 'LZHlzh.rootOOT12#'),
+            'password': os.environ.get('MYSQL_PASSWORD', '123456'),
             'database': os.environ.get('MYSQL_DATABASE', 'instockdb'),
             'charset': os.environ.get('MYSQL_CHARSET', 'utf8mb4')
         }
         
-        # ClickHouse配置
-        self.clickhouse_config = {
-            'host': os.environ.get('CLICKHOUSE_HOST', '192.168.1.6'),
-            'port': int(os.environ.get('CLICKHOUSE_PORT', '8123')),
-            'tcp': os.environ.get('CLICKHOUSE_TCP', '9000'),
-            'username': os.environ.get('CLICKHOUSE_USER', 'root'),
-            'password': os.environ.get('CLICKHOUSE_PASSWORD', '123456'),
-            'database': os.environ.get('CLICKHOUSE_DATABASE', 'instockdb')
-        }
+        # ClickHouse配置 - 使用统一配置
+        from instock.lib.clickhouse_config import get_clickhouse_config
+        self.clickhouse_config = get_clickhouse_config()
         
-        logging.info(f"数据库配置初始化完成，当前使用: {self.db_type.value}")
+        logger.info(f"数据库配置初始化完成，当前使用: {self.db_type.value}")
     
     def get_current_config(self) -> Dict[str, Any]:
         """获取当前数据库配置"""
@@ -68,7 +67,7 @@ class DatabaseConfig:
             db_type = DatabaseType(db_type.lower())
         
         self.db_type = db_type
-        logging.info(f"数据库类型已切换至: {self.db_type.value}")
+        logger.info(f"数据库类型已切换至: {self.db_type.value}")
 
 # 全局配置实例
 db_config = DatabaseConfig()
@@ -164,10 +163,10 @@ class MySQLDatabase(DatabaseInterface):
             }
             self._connection = pymysql.connect(**pymysql_config)
             
-            logging.info(f"MySQL连接初始化成功: {self.config['host']}:{self.config['port']}/{self.config['database']}")
+            logger.info(f"MySQL连接初始化成功: {self.config['host']}:{self.config['port']}/{self.config['database']}")
             
         except Exception as e:
-            logging.error(f"MySQL连接初始化失败: {e}")
+            logger.error(f"MySQL连接初始化失败: {e}")
             raise
     
     def query(self, sql: str, *params) -> List[Dict]:
@@ -178,7 +177,7 @@ class MySQLDatabase(DatabaseInterface):
             else:
                 return self._torndb_connection.query(sql)
         except Exception as e:
-            logging.error(f"MySQL查询错误: {e}, SQL: {sql}")
+            logger.error(f"MySQL查询错误: {e}, SQL: {sql}")
             raise
     
     def query_to_dataframe(self, sql: str, params: Optional[Union[Tuple, Dict]] = None) -> pd.DataFrame:
@@ -193,7 +192,7 @@ class MySQLDatabase(DatabaseInterface):
             return pd.read_sql(sql, engine, params=params)
             
         except Exception as e:
-            logging.error(f"MySQL DataFrame查询错误: {e}, SQL: {sql}")
+            logger.error(f"MySQL DataFrame查询错误: {e}, SQL: {sql}")
             return pd.DataFrame()
     
     def execute(self, sql: str, *params) -> bool:
@@ -218,7 +217,7 @@ class MySQLDatabase(DatabaseInterface):
             return True
             
         except Exception as e:
-            logging.error(f"MySQL执行错误: {e}, SQL: {sql}")
+            logger.error(f"MySQL执行错误: {e}, SQL: {sql}")
             return False
     
     def close(self):
@@ -248,11 +247,11 @@ class MySQLDatabase(DatabaseInterface):
                 df.to_sql(name=table_name, con=engine, if_exists='append',
                          dtype=cols_type, index=write_index)
             
-            logging.info(f"成功插入 {len(df)} 条记录到 MySQL 表 {table_name}")
+            logger.info(f"成功插入 {len(df)} 条记录到 MySQL 表 {table_name}")
             return True
             
         except Exception as e:
-            logging.error(f"MySQL DataFrame插入错误: {e}, 表: {table_name}")
+            logger.error(f"MySQL DataFrame插入错误: {e}, 表: {table_name}")
             return False
 
 # ClickHouse实现
@@ -269,10 +268,10 @@ class ClickHouseDatabase(DatabaseInterface):
         try:
             from instock.lib.clickhouse_client import ClickHouseClient
             self._client = ClickHouseClient(self.config)
-            logging.info(f"ClickHouse连接初始化成功: {self.config['host']}:{self.config['port']}/{self.config['database']}")
+            logger.info(f"ClickHouse连接初始化成功: {self.config['host']}:{self.config['port']}/{self.config['database']}")
             
         except Exception as e:
-            logging.error(f"ClickHouse连接初始化失败: {e}")
+            logger.error(f"ClickHouse连接初始化失败: {e}")
             raise
     
     def _execute_chdb_query(self, sql: str, params: Optional[Union[Tuple, Dict]] = None, return_type: str = "DataFrame") -> Union[pd.DataFrame, List[Dict]]:
@@ -345,15 +344,15 @@ class ClickHouseDatabase(DatabaseInterface):
                                         _ = dt.timestamp()
                                         valid_dates.append(dt.date())
                                     else:
-                                        logging.warning(f"日期超出范围，跳过: {dt}")
+                                        logger.warning(f"日期超出范围，跳过: {dt}")
                                         valid_dates.append(None)
                             except (ValueError, OSError, OverflowError) as e:
-                                logging.warning(f"日期转换失败: {val} -> {e}")
+                                logger.warning(f"日期转换失败: {val} -> {e}")
                                 valid_dates.append(None)
                     
                     result_df["date"] = valid_dates
                 except Exception as e:
-                    logging.warning(f"日期转换失败: {e}")
+                    logger.warning(f"日期转换失败: {e}")
             if return_type == "DataFrame":
                 return result_df if not result_df.empty else pd.DataFrame()
             elif return_type == "records":
@@ -365,7 +364,7 @@ class ClickHouseDatabase(DatabaseInterface):
                 raise ValueError(f"不支持的返回类型: {return_type}")
                 
         except Exception as e:
-            logging.error(f"ClickHouse查询错误: {e}, SQL: {sql}")
+            logger.error(f"ClickHouse查询错误: {e}, SQL: {sql}")
             if return_type == "DataFrame":
                 return pd.DataFrame()
             else:
@@ -409,7 +408,7 @@ class ClickHouseDatabase(DatabaseInterface):
             return wrapped_sql
             
         except Exception as e:
-            logging.warning(f"包装SQL为remote格式失败: {e}，使用原SQL")
+            logger.warning(f"包装SQL为remote格式失败: {e}，使用原SQL")
             return sql
     
     def execute(self, sql: str, *params, dataformat=None) -> bool:
@@ -449,7 +448,7 @@ class ClickHouseDatabase(DatabaseInterface):
                 return result
             
         except Exception as e:
-            logging.error(f"ClickHouse执行错误: {e}, SQL: {sql}")
+            logger.error(f"ClickHouse执行错误: {e}, SQL: {sql}")
             return False
     
     def close(self):
@@ -481,11 +480,11 @@ class ClickHouseDatabase(DatabaseInterface):
             # 使用ClickHouse客户端的DataFrame插入方法，传递表定义
             result = self._client.insert_dataframe(table_name, df_copy, table_definition)
             
-            logging.info(f"成功插入 {len(df_copy)} 条记录到 ClickHouse 表 {table_name}")
+            logger.info(f"成功插入 {len(df_copy)} 条记录到 ClickHouse 表 {table_name}")
             return result
             
         except Exception as e:
-            logging.error(f"ClickHouse DataFrame插入错误: {e}, 表: {table_name}")
+            logger.error(f"ClickHouse DataFrame插入错误: {e}, 表: {table_name}")
             return False
     
     def _convert_dataframe_for_clickhouse(self, df: pd.DataFrame, cols_type=None):
@@ -515,14 +514,14 @@ class ClickHouseDatabase(DatabaseInterface):
                                         _ = dt.timestamp()
                                         valid_dates.append(dt.date())
                                     else:
-                                        logging.warning(f"日期超出范围，跳过: {dt}")
+                                        logger.warning(f"日期超出范围，跳过: {dt}")
                                         valid_dates.append(None)
                                 except (ValueError, OSError, OverflowError):
-                                    logging.warning(f"日期无效，跳过: {dt}")
+                                    logger.warning(f"日期无效，跳过: {dt}")
                                     valid_dates.append(None)
                         df_converted[col] = valid_dates
                     except Exception as e:
-                        logging.warning(f"日期转换失败 {col}: {e}")
+                        logger.warning(f"日期转换失败 {col}: {e}")
                         # 保持原格式
                         pass
                 
@@ -556,7 +555,7 @@ class ClickHouseDatabase(DatabaseInterface):
             return df_converted
             
         except Exception as e:
-            logging.exception(f"DataFrame类型转换失败: {e}")
+            logger.exception(f"DataFrame类型转换失败: {e}")
             # 如果转换失败，返回原始DataFrame
             return df
     
@@ -612,16 +611,16 @@ class ClickHouseDatabase(DatabaseInterface):
                 SETTINGS index_granularity = 8192
             """
             print(create_sql)
-            logging.info(f"准备创建ClickHouse表 {table_name}，SQL: {create_sql}")
+            logger.info(f"准备创建ClickHouse表 {table_name}，SQL: {create_sql}")
             
             success = self.execute(create_sql)
             if success:
-                logging.info(f"ClickHouse表 {table_name} 创建成功")
+                logger.info(f"ClickHouse表 {table_name} 创建成功")
             else:
-                logging.error(f"ClickHouse表 {table_name} 创建失败")
+                logger.error(f"ClickHouse表 {table_name} 创建失败")
                 
         except Exception as e:
-            logging.error(f"创建ClickHouse表 {table_name} 异常: {e}")
+            logger.error(f"创建ClickHouse表 {table_name} 异常: {e}")
     
     def _convert_sqlalchemy_to_clickhouse_type(self, sqlalchemy_type):
         """将SQLAlchemy类型转换为ClickHouse类型"""
@@ -724,7 +723,7 @@ class ClickHouseDatabase(DatabaseInterface):
             return table_mapping.get(table_name)
             
         except Exception as e:
-            logging.warning(f"无法获取表 {table_name} 的定义: {e}")
+            logger.warning(f"无法获取表 {table_name} 的定义: {e}")
             return None
 
 # 数据库工厂类
@@ -772,7 +771,7 @@ def switch_database_type(db_type: Union[str, DatabaseType]):
     # 重新创建实例
     _database_instance = DatabaseFactory.create_database()
     
-    logging.info(f"数据库实例已切换至: {db_type}")
+    logger.info(f"数据库实例已切换至: {db_type}")
 
 # 兼容性函数（保持向后兼容）
 def get_connection():

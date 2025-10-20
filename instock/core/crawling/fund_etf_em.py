@@ -10,6 +10,7 @@ import math
 import pandas as pd
 import requests
 from instock.core.proxy_pool import get_proxy
+from instock.lib.progress_tracker import update as progress_update
 
 def fund_etf_spot_em(proxy=None) -> pd.DataFrame:
     """
@@ -38,20 +39,26 @@ def fund_etf_spot_em(proxy=None) -> pd.DataFrame:
     r = requests.get(url, params=params, proxies=proxy)
     data_json = r.json()
 
-    data = data_json["data"]["diff"]
+    data = data_json.get("data", {}).get("diff")
     if not data:
         return pd.DataFrame()
 
-    data_count = data_json["data"]["total"]
-    page_count = math.ceil(data_count/page_size)
+    data_count = data_json.get("data", {}).get("total", len(data))
+    progress_update('fund_etf', current=len(data), total=data_count, message='拉取第1页')
+    page_count = math.ceil(data_count / page_size)
     while page_count > 1:
         page_current = page_current + 1
         params["pn"] = page_current
         r = requests.get(url, params=params, proxies=get_proxy())
         data_json = r.json()
-        _data = data_json["data"]["diff"]
+        _data = data_json.get("data", {}).get("diff")
+        if not _data:
+            break
         data.extend(_data)
-        page_count =page_count - 1
+        progress_update('fund_etf', current=len(data), total=data_count, message=f'拉取第{page_current}页')
+        page_count = page_count - 1
+
+    progress_update('fund_etf', current=len(data), total=data_count, message='分页抓取完成', success=True)
 
     temp_df = pd.DataFrame(data)
     temp_df.rename(

@@ -93,7 +93,6 @@ class GetStockDataHandler(webBase.BaseHandler, ABC):
         search_keyword = self.get_argument("search", default=None, strip=False)
         # 数据库类型参数（可选）
         db_type_param = self.get_argument("db_type", default=None, strip=False)
-        
         web_module_data = sswmd.stock_web_module_data().get_data(name)
         self.set_header('Content-Type', 'application/json;charset=UTF-8')
         

@@ -3,6 +3,11 @@
 
 from sqlalchemy import DATE, VARCHAR, FLOAT, BIGINT, SmallInteger, DATETIME, INT
 from sqlalchemy.dialects.mysql import BIT
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import talib as tl
 from instock.core.strategy import enter
 from instock.core.strategy import turtle_trade
@@ -1083,3 +1088,64 @@ def get_field_type_name(col_type):
         return "numeric"
     else:
         return "string"
+
+
+# ClickHouse表结构定义
+TABLE_CN_STOCK_HISTORY_CLICKHOUSE = {
+    'name': 'cn_stock_history',
+    'cn': '股票历史数据(ClickHouse)',
+    'columns': {
+        'date': {'type': 'Date', 'cn': '日期', 'nullable': False},
+        'code': {'type': 'LowCardinality(String)', 'cn': '代码', 'nullable': False},
+        'market': {'type': 'LowCardinality(String)', 'cn': '市场', 'nullable': False},
+        'open': {'type': 'Decimal(12, 4)', 'cn': '开盘价', 'nullable': True},
+        'high': {'type': 'Decimal(12, 4)', 'cn': '最高价', 'nullable': True},
+        'low': {'type': 'Decimal(12, 4)', 'cn': '最低价', 'nullable': True},
+        'close': {'type': 'Decimal(12, 4)', 'cn': '收盘价', 'nullable': True},
+        'preclose': {'type': 'Decimal(12, 4)', 'cn': '昨收价', 'nullable': True},
+        'volume': {'type': 'UInt64', 'cn': '成交量', 'nullable': True},
+        'amount': {'type': 'Decimal(20, 2)', 'cn': '成交额', 'nullable': True},
+        'adjustflag': {'type': 'UInt8', 'cn': '复权标志', 'nullable': True},
+        'turn': {'type': 'Decimal(8, 4)', 'cn': '换手率', 'nullable': True},
+        'tradestatus': {'type': 'UInt8', 'cn': '交易状态', 'nullable': True},
+        'p_change': {'type': 'Decimal(8, 4)', 'cn': '涨跌幅', 'nullable': True},
+        'isST': {'type': 'UInt8', 'cn': '是否ST', 'nullable': True}
+    },
+    'engine': 'MergeTree()',
+    'partition_by': 'toYYYYMM(date)',
+    'order_by': '(date, code)',
+    'settings': 'index_granularity = 8192'
+}
+
+# ClickHouse物化视图定义
+TABLE_CN_MARKET_DAILY_STATS = {
+    'name': 'cn_market_daily_stats',
+    'cn': '市场日度统计',
+    'columns': {
+        'date': {'type': 'Date', 'cn': '日期', 'nullable': False},
+        'market': {'type': 'LowCardinality(String)', 'cn': '市场', 'nullable': False},
+        'stock_count': {'type': 'UInt64', 'cn': '股票数量', 'nullable': False},
+        'total_volume': {'type': 'UInt64', 'cn': '总成交量', 'nullable': False},
+        'total_amount': {'type': 'Decimal(20, 2)', 'cn': '总成交额', 'nullable': False},
+        'up_count': {'type': 'UInt64', 'cn': '上涨数量', 'nullable': False},
+        'down_count': {'type': 'UInt64', 'cn': '下跌数量', 'nullable': False},
+        'avg_change': {'type': 'Decimal(8, 4)', 'cn': '平均涨跌幅', 'nullable': True}
+    },
+    'engine': 'SummingMergeTree()',
+    'partition_by': 'toYYYYMM(date)',
+    'order_by': '(date, market)'
+}
+
+TABLE_CN_STOCK_BASIC_INFO = {
+    'name': 'cn_stock_basic_info',
+    'cn': '股票基础信息',
+    'columns': {
+        'code': {'type': 'LowCardinality(String)', 'cn': '代码', 'nullable': False},
+        'market': {'type': 'LowCardinality(String)', 'cn': '市场', 'nullable': False},
+        'last_trading_date': {'type': 'Date', 'cn': '最后交易日', 'nullable': True},
+        'first_trading_date': {'type': 'Date', 'cn': '首次交易日', 'nullable': True},
+        'total_trading_days': {'type': 'UInt64', 'cn': '总交易日数', 'nullable': False}
+    },
+    'engine': 'ReplacingMergeTree()',
+    'order_by': 'code'
+}

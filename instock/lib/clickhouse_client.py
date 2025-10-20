@@ -1,26 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import os
+import time
 import traceback
 import pandas as pd
 import numpy as np
 from typing import Optional, Dict, Any, List, Union
 from datetime import datetime, date
-import logging
-# 配置日志
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# ClickHouse配置
-CLICKHOUSE_CONFIG = {
-    'host': os.environ.get('CLICKHOUSE_HOST'),
-    'port': int(os.environ.get('CLICKHOUSE_PORT')),
-    'username': os.environ.get('CLICKHOUSE_USER'),
-    'password': os.environ.get('CLICKHOUSE_PASSWORD'),
-    'database': os.environ.get('CLICKHOUSE_DATABASE')
-}
+# ClickHouse配置 - 使用统一配置
+from instock.lib.database_factory import db_config
 
+
+def _get_default_clickhouse_config() -> Dict[str, Any]:
+    """获取当前生效的ClickHouse配置副本，避免使用过期缓存"""
+    return dict(db_config.clickhouse_config)
 
 class ClickHouseClient:
     """
@@ -34,34 +34,44 @@ class ClickHouseClient:
         Args:
             config: ClickHouse配置字典，如果为None则使用默认配置
         """
-        self.config = config or CLICKHOUSE_CONFIG
+        self.config = config or _get_default_clickhouse_config()
         self.client = None
         self._connect()
     
     def _connect(self) -> bool:
         """建立ClickHouse连接"""
-        try:
-            import clickhouse_connect
-            
-            self.client = clickhouse_connect.get_client(
-                host=self.config['host'],
-                port=self.config['port'],
-                username=self.config['username'],
-                password=self.config['password'],
-                database=self.config['database']
-            )
-            
-            # 测试连接
-            result = self.client.query("SELECT 1")
-            logger.info(f"成功连接到ClickHouse: {self.config['host']}:{self.config['port']}/{self.config['database']}")
-            return True
-            
-        except ImportError:
-            logger.error("需要安装clickhouse-connect: pip install clickhouse-connect")
-            return False
-        except Exception as e:
-            logger.error(f"连接ClickHouse失败: {str(e)}")
-            return False
+        max_retries = 3
+        retry_delay = 2
+        
+        for attempt in range(max_retries):
+            try:
+                import clickhouse_connect
+                
+                # 添加连接参数，处理503错误
+                print(self.config)
+                self.client = clickhouse_connect.get_client(
+                    host=self.config['host'],
+                    port=self.config['port'],
+                    username=self.config['username'],
+                    password=self.config['password'],
+                    database=self.config['database']
+                )
+
+                # 测试连接
+                result = self.client.query("SELECT 1")
+                logger.info(f"成功连接到ClickHouse: {self.config['host']}:{self.config['port']}/{self.config['database']}")
+                return True
+                
+            except ImportError:
+                logger.error("需要安装clickhouse-connect: pip install clickhouse-connect")
+                return False
+            except Exception as e:
+                logger.warning(f"连接ClickHouse失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                else:
+                    logger.error(f"ClickHouse连接失败，已达到最大重试次数: {str(e)}")
+                    return False
     
     def execute_query(self, sql: str, parameters: Optional[Dict] = None) -> Optional[Any]:
         """
@@ -78,16 +88,32 @@ class ClickHouseClient:
             logger.error("ClickHouse客户端未连接")
             return None
             
-        try:
-            if parameters:
-                result = self.client.query(sql, parameters=parameters)
-            else:
-                result = self.client.query(sql)
-            return result
-        except Exception as e:
-            logger.error(f"执行查询失败: {str(e)}")
-            logger.error(f"SQL: {sql}")
-            return None
+        import time
+        max_retries = 3
+        retry_delay = 1
+        
+        for attempt in range(max_retries):
+            try:
+                if parameters:
+                    result = self.client.query(sql, parameters=parameters)
+                else:
+                    result = self.client.query(sql)
+                return result
+            except Exception as e:
+                logger.warning(f"执行查询失败 (尝试 {attempt + 1}/{max_retries}): {str(e)}")
+                if "503" in str(e) or "Service Unavailable" in str(e):
+                    if attempt < max_retries - 1:
+                        logger.info(f"遇到503错误，等待{retry_delay}秒后重试...")
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # 指数退避
+                    else:
+                        logger.error(f"查询最终失败: {str(e)}")
+                        logger.error(f"SQL: {sql}")
+                        return None
+                else:
+                    logger.error(f"查询失败: {str(e)}")
+                    logger.error(f"SQL: {sql}")
+                    return None
     
     def query_to_dataframe(self, sql: str, parameters: Optional[Dict] = None) -> Optional[pd.DataFrame]:
         """
@@ -442,7 +468,7 @@ def create_clickhouse_client(config: Optional[Dict[str, Any]] = None) -> ClickHo
     Returns:
         ClickHouseClient实例
     """
-    return ClickHouseClient(config)
+    return ClickHouseClient(config or _get_default_clickhouse_config())
 
 
 def quick_query(sql: str, parameters: Optional[Dict] = None, config: Optional[Dict[str, Any]] = None) -> Optional[pd.DataFrame]:
@@ -485,8 +511,15 @@ if __name__ == "__main__":
     # 测试代码
     print("测试ClickHouse客户端...")
     
-    # 基本连接测试
-    with create_clickhouse_client() as client:
+    # 基本连接测试 - 使用环境变量配置
+    config = {
+        'host': os.environ.get('CLICKHOUSE_HOST', '192.168.1.6'),
+        'port': int(os.environ.get('CLICKHOUSE_PORT', '8123')),
+        'username': os.environ.get('CLICKHOUSE_USER', 'root'),
+        'password': os.environ.get('CLICKHOUSE_PASSWORD', '123456'),
+        'database': os.environ.get('CLICKHOUSE_DB', 'instockdb')
+    }
+    with create_clickhouse_client(config) as client:
         # 测试查询
         result = client.query_to_dataframe("SELECT 1 as test")
         if result is not None:

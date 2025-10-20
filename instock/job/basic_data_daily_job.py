@@ -1,7 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
-import logging
 import os.path
 import sys
 import datetime
@@ -17,6 +16,10 @@ from instock.lib.database_factory import get_database, execute_sql, insert_db_fr
 from instock.lib.common_check import check_and_delete_old_data_for_realtime_data
 import instock.core.stockfetch as stf
 from instock.core.singleton_stock import stock_data
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -33,7 +36,7 @@ def save_nph_stock_spot_data(date, before=True):
             return
         check_and_delete_old_data_for_realtime_data(tbs.TABLE_CN_STOCK_SPOT, data, date)
     except Exception as e:
-        logging.error(f"basic_data_daily_job.save_stock_spot_data处理异常：{e}")
+        logger.error(f"basic_data_daily_job.save_stock_spot_data处理异常：{e}")
 
 
 # 基金实时行情数据。
@@ -47,7 +50,7 @@ def save_nph_etf_spot_data(date, before=True):
             return
         check_and_delete_old_data_for_realtime_data(tbs.TABLE_CN_ETF_SPOT, data, date)
     except Exception as e:
-        logging.error(f"basic_data_daily_job.save_nph_etf_spot_data处理异常：{e}")
+        logger.error(f"basic_data_daily_job.save_nph_etf_spot_data处理异常：{e}")
 
 
 

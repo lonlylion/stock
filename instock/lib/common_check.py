@@ -1,3 +1,8 @@
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import datetime
 import instock.lib.trade_time as trd
 import instock.core.tablestructure as tbs
@@ -92,7 +97,7 @@ def check_and_delete_old_data_for_realtime_data(table_object, data, date, cols_t
             mdb.save_batch_realtime_data_to_history(data, table_object)
         except Exception as e:
             import logging
-            logging.error(f"保存到历史数据库失败：{e}")
+            logger.error(f"保存到历史数据库失败：{e}")
     
     return None
 

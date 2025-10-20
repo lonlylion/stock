@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
+
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import pandas as pd
 import numpy as np
 import talib as tl
@@ -32,7 +37,7 @@ def get_indicators(data, end_date=None, threshold=120, calc_threshold=None):
                 try:
                     data[col] = pd.to_numeric(data[col], errors='coerce').astype(float)
                 except:
-                    logging.warning(f"无法转换列 {col} 为数值类型")
+                    logger.warning(f"无法转换列 {col} 为数值类型")
 
         # import stockstats
         # test = data.copy()
@@ -417,7 +422,7 @@ def get_indicators(data, end_date=None, threshold=120, calc_threshold=None):
             data = data.tail(n=threshold).copy()
         return data
     except Exception as e:
-        logging.error(f"calculate_indicator.get_indicators处理异常：{data['code']}代码{e}")
+        logger.error(f"calculate_indicator.get_indicators处理异常：{data['code']}代码{e}")
     return None
 
 
@@ -458,5 +463,5 @@ def get_indicator(code_name, data, stock_column, date=None, calc_threshold=90):
 
         return pd.Series(stock_data_list, index=stock_column)
     except Exception as e:
-        logging.error(f"calculate_indicator.get_indicator处理异常：{code}代码{e}")
+        logger.error(f"calculate_indicator.get_indicator处理异常：{code}代码{e}")
     return None

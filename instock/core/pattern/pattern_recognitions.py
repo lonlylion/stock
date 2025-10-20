@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
+
 
 __author__ = 'myh '
 __date__ = '2023/3/24 '
@@ -66,6 +66,6 @@ def get_pattern_recognition(code_name, data, stock_column, date=None, calc_thres
             return stockStat.iloc[0, -(len(stock_column) + 1):]
 
     except Exception as e:
-        logging.error(f"pattern_recognitions.get_pattern_recognition处理异常：{code}代码{e}")
+        logger.error(f"pattern_recognitions.get_pattern_recognition处理异常：{code}代码{e}")
 
     return None

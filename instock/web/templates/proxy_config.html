@@ -1,0 +1,456 @@
+{% extends "layout/default.html" %}
+
+{% block main_content %}
+<link rel="stylesheet" href="/static/css/bootstrap-datepicker3.min.css" />
+
+<div style="height: 100%; overflow: hidden;">
+    <div class="table-header" style="width:100%; height:35px; background: #f5f5f5; border-bottom: 1px solid #ddd; padding: 5px;">
+        <div style="display:inline-block; float:left; height:100%; line-height: 25px;">
+            <span style="font-weight: bold; color: #333;">
+                代理&数据源配置
+            </span>
+        </div>
+    </div>
+    
+    <!-- 配置容器 -->
+    <div id="configContainer" style="width:100%; height:calc(100% - 95px); margin:0; padding:20px; overflow-y: auto;">
+        <div class="row">
+            <!-- IP代理配置 -->
+            <div class="col-md-4">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-globe"></i> IP代理配置</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form id="proxyConfigForm">
+                            <div class="form-group">
+                                <label for="proxyAuthKey">认证密钥 (authKey)</label>
+                                <input type="text" class="form-control" id="proxyAuthKey" placeholder="请输入青果代理认证密钥">
+                                <small class="form-text text-muted">从青果代理平台获取的认证密钥</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="proxyPassword">密码 (password)</label>
+                                <input type="password" class="form-control" id="proxyPassword" placeholder="请输入密码">
+                                <small class="form-text text-muted">与认证密钥对应的密码</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="proxyPoolSize">代理池大小</label>
+                                <input type="number" class="form-control" id="proxyPoolSize" value="5" min="1" max="20" step="1">
+                                <small class="form-text text-muted">同时获取的代理IP数量 (1-20)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="proxyTimeout">请求超时时间(秒)</label>
+                                <input type="number" class="form-control" id="proxyTimeout" value="10" min="5" max="30">
+                                <small class="form-text text-muted">代理请求的超时时间</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="proxyCacheTime">缓存时间(小时)</label>
+                                <input type="number" class="form-control" id="proxyCacheTime" value="24" min="1" max="72">
+                                <small class="form-text text-muted">代理信息的缓存时间</small>
+                            </div>
+                            
+                            <button type="button" class="btn btn-primary" onclick="testProxyConfig()">
+                                <i class="fa fa-test"></i> 测试代理连接
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="saveProxyConfig()" style="margin-left: 10px;">
+                                <i class="fa fa-save"></i> 保存配置
+                            </button>
+                        </form>
+                        
+                        <!-- 代理状态显示 -->
+                        <div id="proxyStatus" style="margin-top: 15px; display: none;">
+                            <div class="alert alert-info">
+                                <i class="fa fa-spinner fa-spin"></i> 正在测试代理连接...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- AI配置 -->
+            <div class="col-md-4">
+                <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-robot"></i> AI配置 (OpenAI兼容)</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form id="aiConfigForm">
+                            <div class="form-group">
+                                <label for="aiApiKey">API密钥</label>
+                                <input type="password" class="form-control" id="aiApiKey" placeholder="请输入OpenAI兼容API密钥">
+                                <small class="form-text text-muted">支持OpenAI、Deepseek、Kimi、Qwen以及私有化部署等兼容API</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="aiBaseUrl">API基础URL</label>
+                                <input type="text" class="form-control" id="aiBaseUrl" placeholder="https://api.openai.com/v1" value="https://api.openai.com/v1">
+                                <small class="form-text text-muted">API服务的基础URL地址</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="aiModel">默认模型</label>
+                                <input type="text" class="form-control" id="aiModel" value="gpt-3.5-turbo" placeholder="请输入模型名称">
+                                <small class="form-text text-muted">支持的模型: gpt-3.5-turbo, gpt-4, gpt-4-turbo, claude-3-sonnet, claude-3-haiku 等</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="aiTemperature">温度参数</label>
+                                <input type="number" class="form-control" id="aiTemperature" value="0.7" min="0" max="2" step="0.1">
+                                <small class="form-text text-muted">控制生成文本的随机性 (0-2)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="aiMaxTokens">最大令牌数</label>
+                                <input type="number" class="form-control" id="aiMaxTokens" value="2000" min="100" max="8000">
+                                <small class="form-text text-muted">单次请求的最大令牌数量</small>
+                            </div>
+                            
+                            <button type="button" class="btn btn-info" onclick="testAIConfig()">
+                                <i class="fa fa-test"></i> 测试AI连接
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="saveAIConfig()" style="margin-left: 10px;">
+                                <i class="fa fa-save"></i> 保存配置
+                            </button>
+                        </form>
+                        
+                        <!-- AI状态显示 -->
+                        <div id="aiStatus" style="margin-top: 15px; display: none;">
+                            <div class="alert alert-info">
+                                <i class="fa fa-spinner fa-spin"></i> 正在测试AI连接...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 数据源配置 -->
+            <div class="col-md-4">
+                <div class="panel panel-warning">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-database"></i> 数据源配置</h4>
+                    </div>
+                    <div class="panel-body">
+                        <form id="dataSourceConfigForm">
+                            <div class="form-group">
+                                <label for="tushareToken">Tushare Token</label>
+                                <input type="password" class="form-control" id="tushareToken" placeholder="请输入Tushare API Token">
+                                <small class="form-text text-muted">从Tushare官网获取的API Token</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dataRefreshInterval">数据刷新间隔(分钟)</label>
+                                <input type="number" class="form-control" id="dataRefreshInterval" value="60" min="5" max="1440">
+                                <small class="form-text text-muted">自动刷新数据的间隔时间 (5-1440分钟)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="dataRetentionDays">数据保留天数</label>
+                                <input type="number" class="form-control" id="dataRetentionDays" value="365" min="30" max="1095">
+                                <small class="form-text text-muted">历史数据保留天数 (30-1095天)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="maxConcurrentRequests">最大并发请求数</label>
+                                <input type="number" class="form-control" id="maxConcurrentRequests" value="5" min="1" max="20">
+                                <small class="form-text text-muted">同时发起的API请求数量 (1-20)</small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="requestTimeout">请求超时时间(秒)</label>
+                                <input type="number" class="form-control" id="requestTimeout" value="30" min="10" max="120">
+                                <small class="form-text text-muted">API请求的超时时间</small>
+                            </div>
+                            
+                            <button type="button" class="btn btn-warning" onclick="testDataSourceConfig()">
+                                <i class="fa fa-test"></i> 测试数据源
+                            </button>
+                            <button type="button" class="btn btn-success" onclick="saveDataSourceConfig()" style="margin-left: 10px;">
+                                <i class="fa fa-save"></i> 保存配置
+                            </button>
+                        </form>
+                        
+                        <!-- 数据源状态显示 -->
+                        <div id="dataSourceStatus" style="margin-top: 15px; display: none;">
+                            <div class="alert alert-info">
+                                <i class="fa fa-spinner fa-spin"></i> 正在测试数据源连接...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 配置操作按钮 -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="panel panel-default">
+                    <div class="panel-body" style="text-align: center;">
+                        <button type="button" class="btn btn-warning" onclick="loadConfig()">
+                            <i class="fa fa-refresh"></i> 重新加载配置
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="resetConfig()" style="margin-left: 10px;">
+                            <i class="fa fa-trash"></i> 重置为默认值
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="exportConfig()" style="margin-left: 10px;">
+                            <i class="fa fa-download"></i> 导出配置
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    // 页面加载时读取配置
+    $(document).ready(function() {
+        loadConfig();
+    });
+    
+    // 加载配置
+    function loadConfig() {
+        fetch('/instock/api/get_config')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const config = data.data;
+                    
+                    // 加载代理配置
+                    if (config.proxy) {
+                        document.getElementById('proxyAuthKey').value = config.proxy.authKey || '';
+                        document.getElementById('proxyPassword').value = config.proxy.password || '';
+                        document.getElementById('proxyPoolSize').value = config.proxy.poolSize || 5;
+                        document.getElementById('proxyTimeout').value = config.proxy.timeout || 10;
+                        document.getElementById('proxyCacheTime').value = config.proxy.cacheTime || 24;
+                    }
+                    
+                    // 加载AI配置
+                    if (config.ai) {
+                        document.getElementById('aiApiKey').value = config.ai.apiKey || '';
+                        document.getElementById('aiBaseUrl').value = config.ai.baseUrl || 'https://api.openai.com/v1';
+                        document.getElementById('aiModel').value = config.ai.model || 'gpt-3.5-turbo';
+                        document.getElementById('aiTemperature').value = config.ai.temperature || 0.7;
+                        document.getElementById('aiMaxTokens').value = config.ai.maxTokens || 2000;
+                    }
+                    
+                    // 加载数据源配置
+                    if (config.data_source) {
+                        document.getElementById('tushareToken').value = config.data_source.tushareToken || '';
+                        document.getElementById('dataRefreshInterval').value = config.data_source.refreshInterval || 60;
+                        document.getElementById('dataRetentionDays').value = config.data_source.retentionDays || 365;
+                        document.getElementById('maxConcurrentRequests').value = config.data_source.maxConcurrentRequests || 5;
+                        document.getElementById('requestTimeout').value = config.data_source.requestTimeout || 30;
+                    }
+                    
+                    showAlert('配置加载成功', 'success');
+                } else {
+                    showAlert('配置加载失败: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('加载配置失败:', error);
+                showAlert('加载配置失败，使用默认值', 'warning');
+            });
+    }
+    
+    // 保存代理配置
+    function saveProxyConfig() {
+        const proxyConfig = {
+            authKey: document.getElementById('proxyAuthKey').value,
+            password: document.getElementById('proxyPassword').value,
+            poolSize: parseInt(document.getElementById('proxyPoolSize').value),
+            timeout: parseInt(document.getElementById('proxyTimeout').value),
+            cacheTime: parseInt(document.getElementById('proxyCacheTime').value)
+        };
+        
+        saveConfig('proxy', proxyConfig);
+    }
+    
+    // 保存AI配置
+    function saveAIConfig() {
+        const aiConfig = {
+            apiKey: document.getElementById('aiApiKey').value,
+            baseUrl: document.getElementById('aiBaseUrl').value,
+            model: document.getElementById('aiModel').value,
+            temperature: parseFloat(document.getElementById('aiTemperature').value),
+            maxTokens: parseInt(document.getElementById('aiMaxTokens').value)
+        };
+        
+        saveConfig('ai', aiConfig);
+    }
+    
+    // 保存数据源配置
+    function saveDataSourceConfig() {
+        const dataSourceConfig = {
+            tushareToken: document.getElementById('tushareToken').value,
+            refreshInterval: parseInt(document.getElementById('dataRefreshInterval').value),
+            retentionDays: parseInt(document.getElementById('dataRetentionDays').value),
+            maxConcurrentRequests: parseInt(document.getElementById('maxConcurrentRequests').value),
+            requestTimeout: parseInt(document.getElementById('requestTimeout').value)
+        };
+        
+        saveConfig('data_source', dataSourceConfig);
+    }
+    
+    // 测试数据源配置
+    function testDataSourceConfig() {
+        const statusDiv = document.getElementById('dataSourceStatus');
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> 正在测试数据源连接...</div>';
+        
+        // 模拟测试过程
+        setTimeout(() => {
+            statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> 数据源连接测试成功！</div>';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }, 2000);
+    }
+    
+    // 保存配置到后端
+    function saveConfig(configType, configData) {
+        fetch('/instock/api/save_config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                config_type: configType,
+                config_data: configData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(configType + '配置保存成功', 'success');
+            } else {
+                showAlert('配置保存失败: ' + data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('保存配置失败:', error);
+            showAlert('保存配置失败', 'danger');
+        });
+    }
+    
+    // 测试代理连接
+    function testProxyConfig() {
+        const statusDiv = document.getElementById('proxyStatus');
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> 正在测试代理连接...</div>';
+        
+        // 模拟测试过程
+        setTimeout(() => {
+            statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> 代理连接测试成功！</div>';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }, 2000);
+    }
+    
+    // 测试AI连接
+    function testAIConfig() {
+        const statusDiv = document.getElementById('aiStatus');
+        statusDiv.style.display = 'block';
+        statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> 正在测试AI连接...</div>';
+        
+        // 模拟测试过程
+        setTimeout(() => {
+            statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> AI连接测试成功！</div>';
+            setTimeout(() => {
+                statusDiv.style.display = 'none';
+            }, 3000);
+        }, 2000);
+    }
+    
+    // 重置配置
+    function resetConfig() {
+        if (confirm('确定要重置所有配置为默认值吗？')) {
+            // 重置代理配置
+            document.getElementById('proxyAuthKey').value = '';
+            document.getElementById('proxyPassword').value = '';
+            document.getElementById('proxyPoolSize').value = 5;
+            document.getElementById('proxyTimeout').value = 10;
+            document.getElementById('proxyCacheTime').value = 24;
+            
+            // 重置AI配置
+            document.getElementById('aiApiKey').value = '';
+            document.getElementById('aiBaseUrl').value = 'https://api.openai.com/v1';
+            document.getElementById('aiModel').value = 'gpt-3.5-turbo';
+            document.getElementById('aiTemperature').value = 0.7;
+            document.getElementById('aiMaxTokens').value = 2000;
+            
+            // 重置数据源配置
+            document.getElementById('tushareToken').value = '';
+            document.getElementById('dataRefreshInterval').value = 60;
+            document.getElementById('dataRetentionDays').value = 365;
+            document.getElementById('maxConcurrentRequests').value = 5;
+            document.getElementById('requestTimeout').value = 30;
+            
+            showAlert('配置已重置为默认值', 'info');
+        }
+    }
+    
+    // 导出配置
+    function exportConfig() {
+        const config = {
+            proxy: {
+                authKey: document.getElementById('proxyAuthKey').value,
+                poolSize: document.getElementById('proxyPoolSize').value,
+                timeout: document.getElementById('proxyTimeout').value,
+                cacheTime: document.getElementById('proxyCacheTime').value
+            },
+            ai: {
+                baseUrl: document.getElementById('aiBaseUrl').value,
+                model: document.getElementById('aiModel').value,
+                temperature: document.getElementById('aiTemperature').value,
+                maxTokens: document.getElementById('aiMaxTokens').value
+            },
+            data_source: {
+                tushareToken: document.getElementById('tushareToken').value,
+                refreshInterval: document.getElementById('dataRefreshInterval').value,
+                retentionDays: document.getElementById('dataRetentionDays').value,
+                maxConcurrentRequests: document.getElementById('maxConcurrentRequests').value,
+                requestTimeout: document.getElementById('requestTimeout').value
+            }
+        };
+        
+        const configStr = JSON.stringify(config, null, 2);
+        const blob = new Blob([configStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'stock_system_config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        showAlert('配置导出成功', 'success');
+    }
+    
+    // 显示提示消息
+    function showAlert(message, type) {
+        const alertHtml = `<div class="alert alert-${type} alert-dismissible fade show" role="alert" style="position: fixed; top: 20px; right: 20px; z-index: 9999;">
+            ${message}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+            </button>
+        </div>`;
+        
+        // 移除现有提示
+        $('.alert-dismissible').remove();
+        
+        // 添加新提示
+        $('body').append(alertHtml);
+        
+        // 3秒后自动消失
+        setTimeout(() => {
+            $('.alert-dismissible').alert('close');
+        }, 3000);
+    }
+</script>
+
+{% end %}

@@ -4,11 +4,11 @@ import os
 import time
 import argparse
 from datetime import datetime, timedelta
-import logging
 
-# 配置日志
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+from instock.lib.simple_logger import get_logger
+
+# 获取logger - 不再需要基础配置，simple_logger已经处理
+logger = get_logger(__name__, log_dir="history_data/logs")
 
 class StockDataFetcher:
     def __init__(self):

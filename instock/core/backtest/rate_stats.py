@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
+
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import numpy as np
 import pandas as pd
 
@@ -45,6 +50,6 @@ def get_rates(code_name, data, stock_column, threshold=101):
             stock_data_list.append(None)
 
     except Exception as e:
-        logging.error(f"rate_stats.get_rates处理异常：{code}代码{e}")
+        logger.error(f"rate_stats.get_rates处理异常：{code}代码{e}")
 
     return pd.Series(stock_data_list, index=stock_column)

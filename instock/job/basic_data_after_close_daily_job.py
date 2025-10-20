@@ -1,7 +1,6 @@
 #!/usr/local/bin/python3
 # -*- coding: utf-8 -*-
 
-import logging
 import os.path
 import sys
 
@@ -13,9 +12,8 @@ import instock.core.tablestructure as tbs
 import instock.lib.database as mdb
 from instock.lib.database_factory import get_database, execute_sql, insert_db_from_df
 import instock.core.stockfetch as stf
-
-__author__ = 'myh '
-__date__ = '2023/3/10 '
+from instock.lib.simple_logger import get_logger
+logger = get_logger(__name__)
 
 
 # 每日股票大宗交易
@@ -36,7 +34,7 @@ def save_after_close_stock_blocktrade_data(date):
 
         insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
     except Exception as e:
-        logging.error(f"basic_data_after_close_daily_job.save_stock_blocktrade_data处理异常：{e}")
+        logger.error(f"basic_data_after_close_daily_job.save_stock_blocktrade_data处理异常：{e}")
 
 # 每日尾盘抢筹
 def save_after_close_stock_chip_race_end_data(date):
@@ -56,7 +54,7 @@ def save_after_close_stock_chip_race_end_data(date):
 
         insert_db_from_df(data, table_name, cols_type, False, "`date`,`code`")
     except Exception as e:
-        logging.error(f"basic_data_after_close_daily_job.save_after_close_stock_chip_race_end_data：{e}")
+        logger.error(f"basic_data_after_close_daily_job.save_after_close_stock_chip_race_end_data：{e}")
 
 def main():
     runt.run_with_args(save_after_close_stock_blocktrade_data)

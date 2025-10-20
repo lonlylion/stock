@@ -8,9 +8,14 @@ as torndb.
 """
 
 from __future__ import absolute_import, division, with_statement
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import copy
 import itertools
-import logging
+
 import os
 import time
 import pymysql
@@ -100,7 +105,7 @@ class Connection(object):
         try:
             self.reconnect()
         except Exception:
-            logging.error(f"Cannot connect to MySQL on {self.host}", exc_info=True)
+            logger.error(f"Cannot connect to MySQL on {self.host}", exc_info=True)
 
     def __del__(self):
         self.close()
@@ -244,7 +249,7 @@ class Connection(object):
         try:
             return cursor.execute(query, kwparameters or parameters)
         except OperationalError:
-            logging.error(f"Error connecting to MySQL on {self.host}")
+            logger.error(f"Error connecting to MySQL on {self.host}")
             self.close()
             raise
 

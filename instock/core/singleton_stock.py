@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import time
-import logging
+
 import concurrent.futures
 import instock.core.stockfetch as stf
 import instock.core.tablestructure as tbs
@@ -18,7 +23,7 @@ class stock_data(metaclass=singleton_type):
         try:
             self.data = stf.fetch_stocks(date)
         except Exception as e:
-            logging.error(f"singleton.stock_data处理异常：{e}")
+            logger.error(f"singleton.stock_data处理异常：{e}")
 
     def get_data(self):
         return self.data
@@ -57,9 +62,9 @@ class stock_hist_data(metaclass=singleton_type):
             #            if __data is not None:
             #                _data[stock] = __data
             #        except Exception as e:
-            #            logging.error(f"singleton.stock_hist_data处理异常：{stock[1]}代码{e}")
+            #            logger.error(f"singleton.stock_hist_data处理异常：{stock[1]}代码{e}")
         except Exception as e:
-            logging.exception(f"singleton.stock_hist_data处理异常：{e}")
+            logger.exception(f"singleton.stock_hist_data处理异常：{e}")
     def batch_fetch_stock_hist_optimized(self, stock_codes, date_start, cached_data, stocks):
         """更高效的批量处理版本"""
         if cached_data is None or cached_data.empty:

@@ -10,9 +10,10 @@ import pandas as pd
 import math
 from functools import lru_cache
 from instock.core.proxy_pool import get_proxy
+from instock.lib.progress_tracker import update as progress_update
 
 
-def stock_zh_a_spot_em(proxy=None) -> pd.DataFrame:
+def stock_zh_a_spot_em(proxy=None, task_id: str = 'stock_spot') -> pd.DataFrame:
     """
     东方财富网-沪深京 A 股-实时行情
     https://quote.eastmoney.com/center/gridlist.html#hs_a_board
@@ -37,21 +38,28 @@ def stock_zh_a_spot_em(proxy=None) -> pd.DataFrame:
     }
     r = requests.get(url, params=params, proxies=proxy)
     data_json = r.json()
-    data = data_json["data"]["diff"]
+    data = data_json.get("data", {}).get("diff")
+    progress_update(task_id, current=0, total=None, message='请求第1页')
     if not data:
         return pd.DataFrame()
 
-    data_count = data_json["data"]["total"]
-    page_count = math.ceil(data_count/page_size)
+    data_count = data_json.get("data", {}).get("total", len(data))
+    progress_update(task_id, current=len(data), total=data_count, message=f'拉取第1页，共{data_count}条')
+    page_count = math.ceil(data_count / page_size)
     while page_count > 1:
         page_current = page_current + 1
         params["pn"] = page_current
         # 分页数据
         r = requests.get(url, params=params, proxies=get_proxy())
         data_json = r.json()
-        _data = data_json["data"]["diff"]
+        _data = data_json["data"].get("diff") if data_json.get("data") else None
+        if not _data:
+            break
         data.extend(_data)
-        page_count =page_count - 1
+        progress_update(task_id, current=len(data), total=data_count, message=f'拉取第{page_current}页')
+        page_count = page_count - 1
+
+    progress_update('stock_spot', current=len(data), total=data_count, message='分页抓取完成', success=True)
 
     temp_df = pd.DataFrame(data)
     temp_df.columns = [

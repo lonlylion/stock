@@ -3,7 +3,12 @@
 
 from abc import ABC
 from tornado import gen
-import logging
+
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import instock.core.stockfetch as stf
 import instock.core.kline.visualization as vis
 import instock.web.base as webBase
@@ -56,7 +61,7 @@ class GetDataIndicatorsHandler(webBase.BaseHandler, ABC):
                         
             except Exception as e:
                 error_msg = f"处理股票数据时发生错误: {str(e)}"
-                logging.error(f"dataIndicatorsHandler.GetDataIndicatorsHandler处理异常：{e}")
+                logger.error(f"dataIndicatorsHandler.GetDataIndicatorsHandler处理异常：{e}")
                 import traceback
                 print(f"详细错误信息: {traceback.format_exc()}")
 
@@ -90,7 +95,7 @@ class SaveCollectHandler(webBase.BaseHandler, ABC):
                 self.db.query(sql,datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f"),code)
         except Exception as e:
             err = {"error": str(e)}
-            # logging.info(err)
+            # logger.info(err)
             # self.write(err)
             # return
         self.write("{\"data\":[{}]}")

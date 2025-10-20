@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import logging
+
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
+
 import os
 import pymysql
 import datetime
@@ -13,9 +18,9 @@ import pandas as pd
 __author__ = 'myh '
 __date__ = '2023/3/10 '
 
-db_host = "192.168.1.6"  # 数据库服务主机
+db_host = "localhost"  # 数据库服务主机
 db_user = "root"  # 数据库访问用户
-db_password = "LZHlzh.rootOOT12#"  # 数据库访问密码
+db_password = "123456"  # 数据库访问密码
 db_database = "instockdb"  # 数据库名称
 db_port = 3306  # 数据库服务端口
 db_charset = "utf8mb4"  # 数据库字符集
@@ -39,7 +44,6 @@ if _db_port is not None:
 
 MYSQL_CONN_URL = "mysql+pymysql://%s:%s@%s:%s/%s?charset=%s" % (
     db_user, db_password, db_host, db_port, db_database, db_charset)
-logging.info(f"数据库链接信息：{ MYSQL_CONN_URL}")
 
 MYSQL_CONN_DBAPI = {'host': db_host, 'user': db_user, 'password': db_password, 'database': db_database,
                     'charset': db_charset, 'port': db_port, 'autocommit': True}
@@ -86,8 +90,7 @@ def get_connection():
     try:
         return pymysql.connect(**MYSQL_CONN_DBAPI)
     except Exception as e:
-        logging.error(f"database.conn_not_cursor处理异常：{MYSQL_CONN_DBAPI}{e}")
-    return None
+        logger.error(f"database.conn_not_cursor处理异常：{MYSQL_CONN_DBAPI}{e}")
 
 
 # 定义通用方法函数，插入数据库表，并创建数据库主键，保证重跑数据的时候索引唯一。
@@ -122,7 +125,7 @@ def insert_other_db_from_df(to_db, data, table_name, cols_type, write_index, pri
             data.to_sql(name=table_name, con=engine_mysql, schema=to_db, if_exists='append',
                         dtype=cols_type, index=write_index, )
     except Exception as e:
-        logging.error(f"database.insert_other_db_from_df处理异常：{table_name}表{e}")
+        logger.exception(f"database.insert_other_db_from_df处理异常：{table_name}表{e}")
 
     # 判断是否存在主键
     if not ipt.get_pk_constraint(table_name)['constrained_columns']:
@@ -135,7 +138,7 @@ def insert_other_db_from_df(to_db, data, table_name, cols_type, write_index, pri
                         for k in indexs:
                             db.execute(f'ALTER TABLE `{table_name}` ADD INDEX IN{k}({indexs[k]});')
         except Exception as e:
-            logging.error(f"database.insert_other_db_from_df处理异常：{table_name}表{e}")
+            logger.exception(f"database.insert_other_db_from_df处理异常：{table_name}表{e}")
 
 
 # 检查表是否存在
@@ -156,7 +159,7 @@ def executeSql(sql, params=()):
             try:
                 db.execute(sql, params)
             except Exception as e:
-                logging.error(f"database.executeSql处理异常：{sql}{e}")
+                logger.error(f"database.executeSql处理异常：{sql}{e}")
 
 
 # 查询数据
@@ -167,7 +170,7 @@ def executeSqlFetch(sql, params=()):
                 db.execute(sql, params)
                 return db.fetchall()
             except Exception as e:
-                logging.error(f"database.executeSqlFetch处理异常：{sql}{e}")
+                logger.error(f"database.executeSqlFetch处理异常：{sql}{e}")
     return None
 
 
@@ -183,7 +186,7 @@ def executeSqlCount(sql, params=()):
                 else:
                     return 0
             except Exception as e:
-                logging.error(f"database.select_count计算数量处理异常：{e}")
+                logger.error(f"database.select_count计算数量处理异常：{e}")
     return 0
 
 
@@ -213,7 +216,7 @@ def read_sql_to_df(sql, params=None, to_db=None):
         return df
         
     except Exception as e:
-        logging.error(f"database.read_sql_to_df处理异常：{sql}{e}")
+        logger.exception(f"database.read_sql_to_df处理异常：{sql}{e}")
         return pd.DataFrame()
 
 
@@ -261,7 +264,7 @@ def read_table_to_df(table_name, columns=None, where=None, params=None, to_db=No
         return df
         
     except Exception as e:
-        logging.error(f"database.read_table_to_df处理异常：{table_name}表{e}")
+        logger.error(f"database.read_table_to_df处理异常：{table_name}表{e}")
         return pd.DataFrame()
 
 
@@ -352,7 +355,7 @@ def query_history_data_by_date_range(date_start, date_end=None, base_name="cn_st
         
         # 检查表是否存在
         if not checkTableIsExist(table_name):
-            logging.warning(f"表 {table_name} 不存在，跳过查询")
+            logger.warning(f"表 {table_name} 不存在，跳过查询")
             continue
         
         try:
@@ -381,17 +384,17 @@ def query_history_data_by_date_range(date_start, date_end=None, base_name="cn_st
             # 添加排序
             sql += " ORDER BY date ASC"
             
-            logging.info(f"查询表 {table_name}，日期范围：{table_data['start_date'].strftime('%Y-%m-%d')} 到 {table_data['end_date'].strftime('%Y-%m-%d')}")
+            logger.info(f"查询表 {table_name}，日期范围：{table_data['start_date'].strftime('%Y-%m-%d')} 到 {table_data['end_date'].strftime('%Y-%m-%d')}")
             
             # 执行查询
             df = read_sql_to_df(sql, tuple(query_params), to_db)
             
             if not df.empty:
                 all_data.append(df)
-                logging.info(f"从表 {table_name} 查询到 {len(df)} 条记录")
+                logger.info(f"从表 {table_name} 查询到 {len(df)} 条记录")
             
         except Exception as e:
-            logging.error(f"查询表 {table_name} 时发生错误：{e}")
+            logger.error(f"查询表 {table_name} 时发生错误：{e}")
             continue
     
     # 拼接所有数据
@@ -404,14 +407,14 @@ def query_history_data_by_date_range(date_start, date_end=None, base_name="cn_st
                 result_df['date'] = pd.to_datetime(result_df['date'])
                 result_df = result_df.sort_values('date').reset_index(drop=True)
             except Exception as e:
-                logging.warning(f"日期排序失败，跳过排序：{e}")
+                logger.warning(f"日期排序失败，跳过排序：{e}")
                 # 如果排序失败，至少保证返回数据
                 pass
         
-        logging.info(f"总共查询到 {len(result_df)} 条记录")
+        logger.info(f"总共查询到 {len(result_df)} 条记录")
         return result_df
     else:
-        logging.warning("没有查询到任何数据")
+        logger.warning("没有查询到任何数据")
         return pd.DataFrame()
 
 
@@ -430,12 +433,12 @@ def save_batch_realtime_data_to_history(data, table_object):
     from instock.lib.database_factory import get_database
     
     if data is None or len(data) == 0:
-        logging.warning("没有数据需要保存到历史数据库")
+        logger.warning("没有数据需要保存到历史数据库")
         return False
     
     # 检查数据是否包含date字段
     if 'date' not in data.columns:
-        logging.error("数据中缺少date字段，无法保存到历史数据库")
+        logger.error("数据中缺少date字段，无法保存到历史数据库")
         return False
     
     try:
@@ -482,15 +485,15 @@ def save_batch_realtime_data_to_history(data, table_object):
             db = get_database()
             success = db.insert_from_dataframe(mapped_data, table_name)
             if success:
-                logging.info(f"成功批量保存 {len(mapped_data)} 条数据到ClickHouse表 {table_name}")
+                logger.info(f"成功批量保存 {len(mapped_data)} 条数据到ClickHouse表 {table_name}")
             else:
-                logging.error(f"批量保存数据到ClickHouse表 {table_name} 失败")
+                logger.error(f"批量保存数据到ClickHouse表 {table_name} 失败")
             return success
         
         return True
         
     except Exception as e:
-        logging.error(f"批量保存实时数据到ClickHouse历史数据库时发生异常：{e}")
+        logger.error(f"批量保存实时数据到ClickHouse历史数据库时发生异常：{e}")
         return False
 
 
@@ -513,7 +516,7 @@ def _upsert_history_data(data, table_name):
         
         if not table_exists:
             # 如果表不存在，先创建表结构
-            logging.info(f"历史表 {table_name} 不存在，准备创建")
+            logger.info(f"历史表 {table_name} 不存在，准备创建")
             
             # 定义历史表的基本字段类型
             history_cols_type = {
@@ -547,9 +550,9 @@ def _upsert_history_data(data, table_name):
                         # 添加索引
                         db.execute(f'ALTER TABLE `{table_name}` ADD INDEX IDX_DATE (`date`);')
                         db.execute(f'ALTER TABLE `{table_name}` ADD INDEX IDX_CODE (`code`);')
-                        logging.info(f"成功为表 {table_name} 创建主键和索引")
+                        logger.info(f"成功为表 {table_name} 创建主键和索引")
                     except Exception as e:
-                        logging.warning(f"创建主键和索引时发生异常（可能已存在）：{e}")
+                        logger.warning(f"创建主键和索引时发生异常（可能已存在）：{e}")
             
             # 移除已插入的示例数据
             delete_sql = f"DELETE FROM `{table_name}` WHERE date = %s AND code = %s"
@@ -588,9 +591,9 @@ def _upsert_history_data(data, table_name):
             executeSql(upsert_sql, tuple(row[col] for col in columns))
             upsert_count += 1
         
-        logging.info(f"成功处理 {upsert_count} 条记录到历史表 {table_name}")
+        logger.info(f"成功处理 {upsert_count} 条记录到历史表 {table_name}")
         return True
         
     except Exception as e:
-        logging.error(f"向历史表 {table_name} 执行UPSERT操作时发生异常：{e}")
+        logger.error(f"向历史表 {table_name} 执行UPSERT操作时发生异常：{e}")
         return False

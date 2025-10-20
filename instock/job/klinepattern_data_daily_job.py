@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 
-import logging
+
+
+
 import concurrent.futures
 import pandas as pd
 import os.path
@@ -18,6 +20,9 @@ from instock.lib.database_factory import get_database, execute_sql, insert_db_fr
 from instock.core.singleton_stock import stock_hist_data
 import instock.core.pattern.pattern_recognitions as kpr
 from instock.lib.common_check import check_and_delete_old_data_for_realtime_data
+from instock.lib.simple_logger import get_logger
+# 获取logger
+logger = get_logger(__name__)
 __author__ = 'myh '
 __date__ = '2023/3/10 '
 
@@ -46,7 +51,7 @@ def prepare(date):
         check_and_delete_old_data_for_realtime_data(tbs.TABLE_CN_STOCK_KLINE_PATTERN, data, date)
 
     except Exception as e:
-        logging.error(f"klinepattern_data_daily_job.prepare处理异常：{e}")
+        logger.error(f"klinepattern_data_daily_job.prepare处理异常：{e}")
 
 
 def run_check(stocks, date=None, workers=40):
@@ -63,9 +68,9 @@ def run_check(stocks, date=None, workers=40):
                     if _data_ is not None:
                         data[stock] = _data_
                 except Exception as e:
-                    logging.error(f"klinepattern_data_daily_job.run_check处理异常：{stock[1]}代码{e}")
+                    logger.error(f"klinepattern_data_daily_job.run_check处理异常：{stock[1]}代码{e}")
     except Exception as e:
-        logging.error(f"klinepattern_data_daily_job.run_check处理异常：{e}")
+        logger.error(f"klinepattern_data_daily_job.run_check处理异常：{e}")
     if not data:
         return None
     else:

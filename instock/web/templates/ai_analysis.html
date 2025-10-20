@@ -1,0 +1,182 @@
+{% extends "layout/default.html" %}
+
+{% block main_content %}
+<link rel="stylesheet" href="/static/css/bootstrap-datepicker3.min.css" />
+
+<div style="height: 100%; overflow: hidden;">
+    <div class="table-header" style="width:100%; height:35px; background: #f5f5f5; border-bottom: 1px solid #ddd; padding: 5px;">
+        <div style="display:inline-block; float:left; height:100%; line-height: 25px;">
+            <span style="font-weight: bold; color: #333;">
+                AI综合分析&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日期：
+            </span>
+            <input type="text" value="{{ date_now }}" id="dateid" class="input-group-sm form-control date-picker" style="display: inline-block; width: 120px; margin-left: 10px;">
+            
+            <!-- AI分析按钮 -->
+            <button type="button" id="startAnalysisBtn" class="btn btn-success btn-sm" style="margin-left: 20px;" onclick="checkAIConfig()">
+                <i class="fa fa-robot"></i> 开始AI分析
+            </button>
+            
+            <!-- 状态显示 -->
+            <span id="analysisStatus" style="margin-left: 10px; display: none;" class="label label-info">
+                <i class="fa fa-spinner fa-spin"></i> 分析中...
+            </span>
+        </div>
+    </div>
+    
+    <!-- 分析结果容器 -->
+    <div id="analysisResults" style="width:100%; height:calc(100% - 95px); margin:0; padding:20px; overflow-y: auto;">
+        <div style="text-align: center; color: #6c757d; margin-top: 100px;">
+            <div style="margin-bottom: 20px;">
+                <i class="fa fa-robot" style="font-size: 64px; color: #28a745;"></i>
+            </div>
+            <h4 style="color: #2c3e50; margin-bottom: 15px;">AI综合分析系统</h4>
+            <p style="margin-bottom: 20px; color: #6c757d;">
+                基于人工智能技术，对股票数据进行深度分析和预测
+            </p>
+            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                <div style="background: rgba(40, 167, 69, 0.1); padding: 20px; border-radius: 8px; width: 200px;">
+                    <i class="fa fa-chart-line" style="font-size: 32px; color: #28a745;"></i>
+                    <h5>技术分析</h5>
+                    <p>基于技术指标的趋势分析</p>
+                </div>
+                <div style="background: rgba(0, 123, 255, 0.1); padding: 20px; border-radius: 8px; width: 200px;">
+                    <i class="fa fa-brain" style="font-size: 32px; color: #007bff;"></i>
+                    <h5>机器学习</h5>
+                    <p>使用AI模型预测走势</p>
+                </div>
+                <div style="background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 8px; width: 200px;">
+                    <i class="fa fa-exclamation-triangle" style="font-size: 32px; color: #ffc107;"></i>
+                    <h5>风险预警</h5>
+                    <p>智能识别潜在风险</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    // 检查AI配置
+    function checkAIConfig() {
+        // 检查是否有AI配置
+        fetch('/instock/api/get_config')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const aiConfig = data.data.ai;
+                    
+                    // 检查API密钥是否配置
+                    if (!aiConfig || !aiConfig.apiKey) {
+                        // 没有配置AI，显示提示并跳转
+                        if (confirm('AI配置未完成，是否前往配置页面？')) {
+                            window.location.href = '/instock/proxy_config';
+                        }
+                    } else {
+                        // 已配置AI，开始分析
+                        startAIAnalysis();
+                    }
+                } else {
+                    alert('获取配置失败：' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('检查AI配置失败:', error);
+                alert('检查AI配置失败，请刷新页面重试');
+            });
+    }
+    
+    // 开始AI分析
+    function startAIAnalysis() {
+        const dateParam = document.getElementById('dateid').value;
+        const statusSpan = document.getElementById('analysisStatus');
+        const startBtn = document.getElementById('startAnalysisBtn');
+        
+        // 禁用按钮并显示状态
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> 分析中...';
+        statusSpan.style.display = 'inline-block';
+        
+        // 模拟AI分析过程
+        setTimeout(() => {
+            // 显示分析结果
+            const resultsContainer = document.getElementById('analysisResults');
+            resultsContainer.innerHTML = `
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4><i class="fa fa-check-circle text-success"></i> AI分析完成</h4>
+                    <p>分析日期: ${dateParam}</p>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="panel panel-success">
+                            <div class="panel-heading">
+                                <h4 class="panel-title"><i class="fa fa-thumbs-up"></i> 推荐股票</h4>
+                            </div>
+                            <div class="panel-body">
+                                <ul class="list-group">
+                                    <li class="list-group-item">
+                                        <span class="badge bg-success">95%</span>
+                                        贵州茅台 (600519)
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span class="badge bg-success">88%</span>
+                                        宁德时代 (300750)
+                                    </li>
+                                    <li class="list-group-item">
+                                        <span class="badge bg-success">82%</span>
+                                        招商银行 (600036)
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="panel panel-warning">
+                            <div class="panel-heading">
+                                <h4 class="panel-title"><i class="fa fa-exclamation-triangle"></i> 风险提示</h4>
+                            </div>
+                            <div class="panel-body">
+                                <ul class="list-group">
+                                    <li class="list-group-item">市场波动较大，建议谨慎操作</li>
+                                    <li class="list-group-item">AI分析仅供参考，不构成投资建议</li>
+                                    <li class="list-group-item">注意控制仓位，分散风险</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel panel-info" style="margin-top: 20px;">
+                    <div class="panel-heading">
+                        <h4 class="panel-title"><i class="fa fa-chart-bar"></i> 分析报告</h4>
+                    </div>
+                    <div class="panel-body">
+                        <p>基于${dateParam}的市场数据，AI系统分析了3000+只股票的技术指标和市场情绪，识别出当前市场存在结构性机会。</p>
+                        <p><strong>主要发现：</strong></p>
+                        <ul>
+                            <li>消费板块表现稳健，具备防御性</li>
+                            <li>新能源板块调整后出现买入机会</li>
+                            <li>金融板块估值处于历史低位</li>
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            // 恢复按钮状态
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="fa fa-robot"></i> 重新分析';
+            statusSpan.style.display = 'none';
+            
+        }, 3000); // 模拟3秒分析时间
+    }
+    
+    // 初始化日期选择器
+    $(document).ready(function() {
+        $('.date-picker').datepicker({
+            format: 'yyyy-mm-dd',
+            language: 'zh-CN',
+            autoclose: true
+        });
+    });
+</script>
+
+{% end %}

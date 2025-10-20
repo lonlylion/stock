@@ -4,15 +4,12 @@
 import json
 import os
 import sys
-import asyncio
-import threading
 import time
 import uuid
-import logging
+
 import pandas as pd
 from datetime import datetime, timedelta
 from abc import ABC
-import tornado.web
 import tornado.gen
 from tornado.concurrent import run_on_executor
 from concurrent.futures import ThreadPoolExecutor
@@ -25,6 +22,10 @@ sys.path.append(cpath)
 import instock.web.base as webBase
 import instock.lib.database as mdb
 from instock.lib.database_factory import get_database, DatabaseType
+from instock.lib.simple_logger import get_logger
+
+# 获取logger
+logger = get_logger(__name__)
 
 # 导入历史数据处理模块
 history_data_path = os.path.join(cpath, 'history_data')
@@ -56,58 +57,11 @@ def import_history_modules():
             
         return True
     except Exception as e:
-        print(f"警告: 无法导入历史数据模块: {e}")
+        logger.warning(f"无法导入历史数据模块: {e}")
         return False
 
 # 尝试导入模块
 modules_loaded = import_history_modules()
-
-# 配置日志
-def setup_logger():
-    """配置数据下载模块的日志"""
-    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'log')
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-    
-    # 创建日志器
-    logger = logging.getLogger('data_download')
-    logger.setLevel(logging.INFO)
-    
-    # 避免重复添加handler
-    if not logger.handlers:
-        # 创建文件处理器 - 操作日志
-        operation_log_file = os.path.join(log_dir, 'data_download_operation.log')
-        operation_handler = logging.FileHandler(operation_log_file, encoding='utf-8')
-        operation_handler.setLevel(logging.INFO)
-        
-        # 创建文件处理器 - 错误日志
-        error_log_file = os.path.join(log_dir, 'data_download_error.log')
-        error_handler = logging.FileHandler(error_log_file, encoding='utf-8')
-        error_handler.setLevel(logging.ERROR)
-        
-        # 创建控制台处理器
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.WARNING)
-        
-        # 创建格式器
-        formatter = logging.Formatter(
-            '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            datefmt='%Y-%m-%d %H:%M:%S'
-        )
-        
-        operation_handler.setFormatter(formatter)
-        error_handler.setFormatter(formatter)
-        console_handler.setFormatter(formatter)
-        
-        # 添加处理器到日志器
-        logger.addHandler(operation_handler)
-        logger.addHandler(error_handler)
-        logger.addHandler(console_handler)
-    
-    return logger
-
-# 初始化日志器
-logger = setup_logger()
 
 __author__ = 'AI Assistant'
 __date__ = '2025/9/5'
@@ -573,11 +527,11 @@ class DataDownloadApiHandler(webBase.BaseHandler, ABC):
                         client.close()
                         
                 else:
-                    print("db_engine模块未加载，无法检查数据库")
+                    logger.warning("db_engine模块未加载，无法检查数据库")
                     missing_dates = expected_dates
                     
             except Exception as e:
-                print(f"检查ClickHouse数据时出错: {e}")
+                logger.error(f"检查ClickHouse数据时出错: {e}")
                 # 如果ClickHouse查询失败，假设所有数据都缺失
                 missing_dates = expected_dates
             
