@@ -227,25 +227,13 @@ class stock_web_module_data(metaclass=singleton_type):
             is_realtime=False,
             order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_KLINE_PATTERN['name']}`.`code`) AS `cdatetime`",
             order_by=" code"
-        ), wmd.web_module_data(
-            mode="query",
-            type="股票策略数据",
-            ico="fa fa-check-square-o",
-            name=tbs.TABLE_CN_STOCK_SPOT_BUY['cn'],
-            table_name=tbs.TABLE_CN_STOCK_SPOT_BUY['name'],
-            columns=tuple(tbs.TABLE_CN_STOCK_SPOT_BUY['columns']),
-            column_names=tbs.get_field_cns(tbs.TABLE_CN_STOCK_SPOT_BUY['columns']),
-            primary_key=[],
-            is_realtime=False,
-            order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_SPOT_BUY['name']}`.`code`) AS `cdatetime`",
-            order_by=" code"
         )]
         
-        # 添加系统配置与数据管理页面到菜单
+        # 添加系统配置页面到菜单
         self.data_list.append(
             wmd.web_module_data(
                 mode="page",
-                type="系统配置与数据管理", 
+                type="系统配置", 
                 ico="fa fa-download",
                 name="数据下载",
                 table_name="data_download",
@@ -261,7 +249,7 @@ class stock_web_module_data(metaclass=singleton_type):
         self.data_list.append(
             wmd.web_module_data(
                 mode="page",
-                type="系统配置与数据管理",
+                type="系统配置",
                 ico="fa fa-cogs",
                 name="代理&数据源配置",
                 table_name="proxy_config",
@@ -273,6 +261,36 @@ class stock_web_module_data(metaclass=singleton_type):
             )
         )
 
+        # 添加定时任务管理页面到菜单
+        self.data_list.append(
+            wmd.web_module_data(
+                mode="page",
+                type="系统配置",
+                ico="fa fa-clock-o",
+                name="定时任务管理",
+                table_name="schedule_config",
+                columns=(),
+                column_names=(),
+                primary_key=[],
+                is_realtime=False,
+                url="/instock/schedule_config"
+            )
+        )
+        self.data_list.append(
+            wmd.web_module_data(
+            mode="query",
+            type="股票策略数据",
+            ico="fa fa-check-square-o",
+            name=tbs.TABLE_CN_STOCK_SPOT_BUY['cn'],
+            table_name=tbs.TABLE_CN_STOCK_SPOT_BUY['name'],
+            columns=tuple(tbs.TABLE_CN_STOCK_SPOT_BUY['columns']),
+            column_names=tbs.get_field_cns(tbs.TABLE_CN_STOCK_SPOT_BUY['columns']),
+            primary_key=[],
+            is_realtime=False,
+            order_columns=f"(SELECT `datetime` FROM `{tbs.TABLE_CN_STOCK_ATTENTION['name']}` WHERE `code`=`{tbs.TABLE_CN_STOCK_SPOT_BUY['name']}`.`code`) AS `cdatetime`",
+            order_by=" code"
+        )
+        )
         for table in tbs.TABLE_CN_STOCK_STRATEGIES:
             self.data_list.append(
                 wmd.web_module_data(
@@ -289,6 +307,7 @@ class stock_web_module_data(metaclass=singleton_type):
                     order_by=" code"
                 )
             )
+
         for tmp in self.data_list:
             _data[tmp.table_name] = tmp
         self.data = _data

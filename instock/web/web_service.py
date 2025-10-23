@@ -73,9 +73,12 @@ class Application(tornado.web.Application):
             (r"/instock/ai_analysis", AIPageHandler),
             # 代理配置页面
             (r"/instock/proxy_config", ProxyConfigPageHandler),
+            # 定时任务管理页面
+            (r"/instock/schedule_config", ScheduleConfigPageHandler),
             # 配置管理API
             (r"/instock/api/get_config", configHandler.GetConfigHandler),
             (r"/instock/api/save_config", configHandler.SaveConfigHandler),
+            (r"/instock/api/test_ai", configHandler.AiTestHandler),
         ]
         settings = dict(  # 配置
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
@@ -146,6 +149,18 @@ class ProxyConfigPageHandler(webBase.BaseHandler, ABC):
         date_now_str = run_date.strftime("%Y-%m-%d")
         
         self.render("proxy_config.html",
+                    date_now=date_now_str,
+                    leftMenu=webBase.GetLeftMenu(self.request.uri))
+
+
+class ScheduleConfigPageHandler(webBase.BaseHandler, ABC):
+    @gen.coroutine
+    def get(self):
+        import instock.lib.trade_time as trd
+        run_date, run_date_nph = trd.get_trade_date_last()
+        date_now_str = run_date.strftime("%Y-%m-%d")
+
+        self.render("schedule_config.html",
                     date_now=date_now_str,
                     leftMenu=webBase.GetLeftMenu(self.request.uri))
 

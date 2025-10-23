@@ -357,14 +357,47 @@
         const statusDiv = document.getElementById('aiStatus');
         statusDiv.style.display = 'block';
         statusDiv.innerHTML = '<div class="alert alert-info"><i class="fa fa-spinner fa-spin"></i> 正在测试AI连接...</div>';
-        
-        // 模拟测试过程
-        setTimeout(() => {
-            statusDiv.innerHTML = '<div class="alert alert-success"><i class="fa fa-check-circle"></i> AI连接测试成功！</div>';
+
+        const payload = {
+            apiKey: document.getElementById('aiApiKey').value,
+            baseUrl: document.getElementById('aiBaseUrl').value,
+            model: document.getElementById('aiModel').value,
+            temperature: parseFloat(document.getElementById('aiTemperature').value),
+            maxTokens: parseInt(document.getElementById('aiMaxTokens').value, 10)
+        };
+
+        fetch('/instock/api/test_ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                const latency = result.details && result.details.latency_ms ? result.details.latency_ms + ' ms' : '未知';
+                statusDiv.innerHTML = `
+                    <div class="alert alert-success">
+                        <i class="fa fa-check-circle"></i> ${result.message}<br/>
+                        <small>延迟: ${latency}</small>
+                    </div>`;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fa fa-times-circle"></i> 测试失败: ${result.message}
+                    </div>`;
+            }
+        })
+        .catch(error => {
+            console.error('AI连接测试失败:', error);
+            statusDiv.innerHTML = `<div class="alert alert-danger"><i class="fa fa-times-circle"></i> 测试异常: ${error}</div>`;
+        })
+        .finally(() => {
             setTimeout(() => {
                 statusDiv.style.display = 'none';
-            }, 3000);
-        }, 2000);
+            }, 4000);
+        });
     }
     
     // 重置配置

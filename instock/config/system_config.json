@@ -19,5 +19,24 @@
     "retentionDays": 365,
     "maxConcurrentRequests": 5,
     "requestTimeout": 30
+  },
+  "job_schedules": {
+    "execute_daily_job": [
+      {
+        "cron": "31 9 * * *",
+        "enabled": true,
+        "description": "上午9:31"
+      },
+      {
+        "cron": "31 11 * * *",
+        "enabled": true,
+        "description": "上午11:31"
+      },
+      {
+        "cron": "1 15 * * *",
+        "enabled": true,
+        "description": "下午15:01"
+      }
+    ]
   }
 }
