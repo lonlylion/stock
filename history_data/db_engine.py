@@ -7,7 +7,7 @@ from instock.lib.clickhouse_config import get_clickhouse_config
 # 加载.env文件
 env_path = Path(__file__).parent.parent / '.env'
 if env_path.exists():
-    with open(env_path) as f:
+    with open(env_path, encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#') and '=' in line:

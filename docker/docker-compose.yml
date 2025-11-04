@@ -35,7 +35,9 @@ services:
     restart: unless-stopped
 
   instock:
-    image: mayanghua/instock:latest
+    build:
+      context: ..  
+      dockerfile: docker/Dockerfile
     container_name: InStock
     ports:
       - "9988:9988"
